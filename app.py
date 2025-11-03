@@ -28,16 +28,16 @@ st.sidebar.header("Enter Your Health Information")
 
 HighBP = st.sidebar.selectbox("High Blood Pressure", ["No", "Yes"])
 HighChol = st.sidebar.selectbox("High Cholesterol", ["No", "Yes"])
-CholCheck = st.sidebar.selectbox("Cholesterol Check in Past 5 Years", ["No", "Yes"])
+CholCheck = st.sidebar.selectbox("Cholesterol Check (Past 5 Years)", ["No", "Yes"])
 BMI = st.sidebar.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
-Smoker = st.sidebar.selectbox("Have You Smoked 100+ Cigarettes?", ["No", "Yes"])
+Smoker = st.sidebar.selectbox("Smoked 100+ Cigarettes in Lifetime", ["No", "Yes"])
 Stroke = st.sidebar.selectbox("Ever Had a Stroke?", ["No", "Yes"])
 HeartDiseaseorAttack = st.sidebar.selectbox("Heart Disease or Attack History", ["No", "Yes"])
 PhysActivity = st.sidebar.selectbox("Physically Active in Last 30 Days", ["No", "Yes"])
 Fruits = st.sidebar.selectbox("Consume Fruits Daily?", ["No", "Yes"])
 Veggies = st.sidebar.selectbox("Consume Vegetables Daily?", ["No", "Yes"])
 HvyAlcoholConsump = st.sidebar.selectbox("Heavy Alcohol Consumption?", ["No", "Yes"])
-AnyHealthcare = st.sidebar.selectbox("Have Any Health Care Coverage?", ["No", "Yes"])
+AnyHealthcare = st.sidebar.selectbox("Have Any Health Coverage?", ["No", "Yes"])
 NoDocbcCost = st.sidebar.selectbox("Couldn’t See Doctor Due to Cost?", ["No", "Yes"])
 GenHlth = st.sidebar.selectbox("General Health (1=Excellent, 5=Poor)", [1, 2, 3, 4, 5])
 MentHlth = st.sidebar.slider("Days of Poor Mental Health (Last 30 Days)", 0, 30, 5)
@@ -48,13 +48,24 @@ Age = st.sidebar.slider("Age", 18, 100, 35)
 Education = st.sidebar.selectbox("Education Level (1–6)", [1, 2, 3, 4, 5, 6])
 Income = st.sidebar.selectbox("Income Level (1–8)", [1, 2, 3, 4, 5, 6, 7, 8])
 
-# -------------------- FEATURE MAPPING --------------------
+# Additional derived features
+BMI_Category = st.sidebar.selectbox("BMI Category (1=Underweight, 2=Normal, 3=Overweight, 4=Obese)", [1, 2, 3, 4])
+Age_Category = st.sidebar.selectbox("Age Category (1=18-24 ... 13=80+)", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+Smoke_Alcohol = st.sidebar.slider("Combined Smoke-Alcohol Score (0–5)", 0.0, 5.0, 1.0)
+BMIxAge = BMI * Age
+Lifestyle_Score = st.sidebar.slider("Lifestyle Score (0–10)", 0.0, 10.0, 5.0)
+
+# -------------------- FEATURE ORDER --------------------
 feature_names = [
-    "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke", "HeartDiseaseorAttack",
-    "PhysActivity", "Fruits", "Veggies", "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost",
-    "GenHlth", "MentHlth", "PhysHlth", "DiffWalk", "Sex", "Age", "Education", "Income"
+    "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke",
+    "HeartDiseaseorAttack", "PhysActivity", "Fruits", "Veggies",
+    "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost", "GenHlth",
+    "MentHlth", "PhysHlth", "DiffWalk", "Sex", "Age", "Education",
+    "Income", "BMI_Category", "Age_Category", "Smoke_Alcohol",
+    "BMIxAge", "Lifestyle_Score"
 ]
 
+# -------------------- INPUT DATAFRAME --------------------
 input_data = pd.DataFrame([[
     1 if HighBP == "Yes" else 0,
     1 if HighChol == "Yes" else 0,
@@ -76,13 +87,23 @@ input_data = pd.DataFrame([[
     1 if Sex == "Male" else 0,
     Age,
     Education,
-    Income
+    Income,
+    BMI_Category,
+    Age_Category,
+    Smoke_Alcohol,
+    BMIxAge,
+    Lifestyle_Score
 ]], columns=feature_names)
 
 # -------------------- PREDICTION --------------------
 if st.button("🔍 Predict Diabetes Risk"):
-    prediction = model.predict(input_data)[0]
-    probability = model.predict_proba(input_data)[0][1]
+    try:
+        prediction = model.predict(input_data)[0]
+        probability = model.predict_proba(input_data)[0][1]
+    except ValueError:
+        # Handle feature name mismatch gracefully
+        prediction = model.predict(input_data.to_numpy())[0]
+        probability = model.predict_proba(input_data.to_numpy())[0][1]
 
     st.subheader("📊 Prediction Result")
     if prediction == 1:
@@ -114,7 +135,6 @@ if st.button("🔍 Predict Diabetes Risk"):
     shap_values = explainer.shap_values(input_data)
     shap.initjs()
 
-    # Render SHAP force plot as matplotlib figure
     fig, ax = plt.subplots()
     shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
     st.pyplot(fig)
