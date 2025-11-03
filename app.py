@@ -5,6 +5,7 @@ import joblib
 import shap
 import plotly.graph_objects as go
 import xgboost as xgb
+import matplotlib.pyplot as plt
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="GlycoTrack: Diabetes Risk Prediction", page_icon="🩺", layout="centered")
@@ -27,22 +28,55 @@ st.sidebar.header("Enter Your Health Information")
 
 HighBP = st.sidebar.selectbox("High Blood Pressure", ["No", "Yes"])
 HighChol = st.sidebar.selectbox("High Cholesterol", ["No", "Yes"])
+CholCheck = st.sidebar.selectbox("Cholesterol Check in Past 5 Years", ["No", "Yes"])
 BMI = st.sidebar.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
-PhysActivity = st.sidebar.selectbox("Physically Active", ["No", "Yes"])
+Smoker = st.sidebar.selectbox("Have You Smoked 100+ Cigarettes?", ["No", "Yes"])
+Stroke = st.sidebar.selectbox("Ever Had a Stroke?", ["No", "Yes"])
+HeartDiseaseorAttack = st.sidebar.selectbox("Heart Disease or Attack History", ["No", "Yes"])
+PhysActivity = st.sidebar.selectbox("Physically Active in Last 30 Days", ["No", "Yes"])
+Fruits = st.sidebar.selectbox("Consume Fruits Daily?", ["No", "Yes"])
+Veggies = st.sidebar.selectbox("Consume Vegetables Daily?", ["No", "Yes"])
+HvyAlcoholConsump = st.sidebar.selectbox("Heavy Alcohol Consumption?", ["No", "Yes"])
+AnyHealthcare = st.sidebar.selectbox("Have Any Health Care Coverage?", ["No", "Yes"])
+NoDocbcCost = st.sidebar.selectbox("Couldn’t See Doctor Due to Cost?", ["No", "Yes"])
 GenHlth = st.sidebar.selectbox("General Health (1=Excellent, 5=Poor)", [1, 2, 3, 4, 5])
+MentHlth = st.sidebar.slider("Days of Poor Mental Health (Last 30 Days)", 0, 30, 5)
+PhysHlth = st.sidebar.slider("Days of Poor Physical Health (Last 30 Days)", 0, 30, 5)
+DiffWalk = st.sidebar.selectbox("Difficulty Walking or Climbing Stairs?", ["No", "Yes"])
+Sex = st.sidebar.selectbox("Sex", ["Female", "Male"])
 Age = st.sidebar.slider("Age", 18, 100, 35)
+Education = st.sidebar.selectbox("Education Level (1–6)", [1, 2, 3, 4, 5, 6])
+Income = st.sidebar.selectbox("Income Level (1–8)", [1, 2, 3, 4, 5, 6, 7, 8])
 
+# -------------------- FEATURE MAPPING --------------------
+feature_names = [
+    "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke", "HeartDiseaseorAttack",
+    "PhysActivity", "Fruits", "Veggies", "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost",
+    "GenHlth", "MentHlth", "PhysHlth", "DiffWalk", "Sex", "Age", "Education", "Income"
+]
 
-# Feature order (same as training)
-feature_names = ["HighBP", "HighChol", "BMI", "PhysActivity", "GenHlth", "Age"]
 input_data = pd.DataFrame([[
     1 if HighBP == "Yes" else 0,
     1 if HighChol == "Yes" else 0,
+    1 if CholCheck == "Yes" else 0,
     BMI,
+    1 if Smoker == "Yes" else 0,
+    1 if Stroke == "Yes" else 0,
+    1 if HeartDiseaseorAttack == "Yes" else 0,
     1 if PhysActivity == "Yes" else 0,
+    1 if Fruits == "Yes" else 0,
+    1 if Veggies == "Yes" else 0,
+    1 if HvyAlcoholConsump == "Yes" else 0,
+    1 if AnyHealthcare == "Yes" else 0,
+    1 if NoDocbcCost == "Yes" else 0,
     GenHlth,
-    Age
-    
+    MentHlth,
+    PhysHlth,
+    1 if DiffWalk == "Yes" else 0,
+    1 if Sex == "Male" else 0,
+    Age,
+    Education,
+    Income
 ]], columns=feature_names)
 
 # -------------------- PREDICTION --------------------
@@ -74,12 +108,16 @@ if st.button("🔍 Predict Diabetes Risk"):
 
     # -------------------- SHAP EXPLANATION --------------------
     st.subheader("🔎 Why This Prediction?")
-    st.write("This chart shows how each feature influenced your result:")
+    st.write("Feature contribution visualization (using SHAP values):")
 
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(input_data)
     shap.initjs()
-    st.pyplot(shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False))
+
+    # Render SHAP force plot as matplotlib figure
+    fig, ax = plt.subplots()
+    shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
+    st.pyplot(fig)
 
     # -------------------- SUMMARY METRICS --------------------
     st.markdown("---")
@@ -90,4 +128,4 @@ if st.button("🔍 Predict Diabetes Risk"):
     col3.metric("ROC-AUC", "0.91")
 
 st.markdown("---")
-st.caption("Final Model: Tuned XGBoost (SMOTE) | Developed by Kaushlendra Pratap Singh")
+st.caption("Final Model: Tuned XGBoost (SMOTE) | Developed by **Kaushlendra Pratap Singh**")
