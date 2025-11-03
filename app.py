@@ -25,22 +25,24 @@ model = load_model()
 # -------------------- USER INPUTS --------------------
 st.sidebar.header("Enter Your Health Information")
 
-age = st.sidebar.slider("Age", 18, 100, 35)
-bmi = st.sidebar.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
-high_bp = st.sidebar.selectbox("High Blood Pressure", ["No", "Yes"])
-high_chol = st.sidebar.selectbox("High Cholesterol", ["No", "Yes"])
-phys_activity = st.sidebar.selectbox("Physically Active", ["No", "Yes"])
-general_health = st.sidebar.selectbox("General Health (1=Excellent, 5=Poor)", [1, 2, 3, 4, 5])
+HighBP = st.sidebar.selectbox("High Blood Pressure", ["No", "Yes"])
+HighChol = st.sidebar.selectbox("High Cholesterol", ["No", "Yes"])
+BMI = st.sidebar.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
+PhysActivity = st.sidebar.selectbox("Physically Active", ["No", "Yes"])
+GenHlth = st.sidebar.selectbox("General Health (1=Excellent, 5=Poor)", [1, 2, 3, 4, 5])
+Age = st.sidebar.slider("Age", 18, 100, 35)
+
 
 # Feature order (same as training)
-feature_names = ["HighBP", "HighChol", "PhysActivity", "GenHlth", "Age", "BMI"]
+feature_names = ["HighBP", "HighChol", "BMI", "PhysActivity", "GenHlth", "Age"]
 input_data = pd.DataFrame([[
-    1 if high_bp == "Yes" else 0,
-    1 if high_chol == "Yes" else 0,
-    1 if phys_activity == "Yes" else 0,
-    general_health,
-    age,
-    bmi
+    1 if HighBP == "Yes" else 0,
+    1 if HighChol == "Yes" else 0,
+    BMI,
+    1 if PhysActivity == "Yes" else 0,
+    GenHlth,
+    Age
+    
 ]], columns=feature_names)
 
 # -------------------- PREDICTION --------------------
