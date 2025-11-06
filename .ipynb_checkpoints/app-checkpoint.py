@@ -45,12 +45,12 @@ PhysHlth = st.sidebar.slider("Days of Poor Physical Health (Last 30 Days)", 0, 3
 DiffWalk = st.sidebar.selectbox("Difficulty Walking or Climbing Stairs?", ["No", "Yes"])
 Sex = st.sidebar.selectbox("Sex", ["Female", "Male"])
 Age = st.sidebar.slider("Age", 18, 100, 35)
-Education = st.sidebar.selectbox("Education Level (1–6)", [1, 2, 3, 4, 5, 6])
-Income = st.sidebar.selectbox("Income Level (1–8)", [1, 2, 3, 4, 5, 6, 7, 8])
+Education = st.sidebar.selectbox("Education Level (1=No school ... 6=College 4+ years)", [1, 2, 3, 4, 5, 6])
+Income = st.sidebar.selectbox("Income Level (1=10000 or less ... 8=75000 or more)", [1, 2, 3, 4, 5, 6, 7, 8])
 
 # Additional derived features
 BMI_Category = st.sidebar.selectbox("BMI Category (1=Underweight, 2=Normal, 3=Overweight, 4=Obese)", [1, 2, 3, 4])
-Age_Category = st.sidebar.selectbox("Age Category (1=18-24 ... 13=80+)", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+Age_Category = st.sidebar.selectbox("Age Category (1=Youth, 2=Adult, 3=Middle-aged, 4= Senior)", [1, 2, 3, 4])
 Smoke_Alcohol = st.sidebar.slider("Combined Smoke-Alcohol Score (0–5)", 0.0, 5.0, 1.0)
 BMIxAge = BMI * Age
 Lifestyle_Score = st.sidebar.slider("Lifestyle Score (0–10)", 0.0, 10.0, 5.0)
