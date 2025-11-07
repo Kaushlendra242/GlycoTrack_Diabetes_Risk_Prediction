@@ -50,7 +50,7 @@ Income = st.sidebar.selectbox("Income Level (1=10000 or less ... 8=75000 or more
 
 # Additional derived features
 BMI_Category = st.sidebar.selectbox("BMI Category (1=Underweight, 2=Normal, 3=Overweight, 4=Obese)", [1, 2, 3, 4])
-Age_Category = st.sidebar.selectbox("Age Category (1=Youth, 2=Adult, 3=Middle-aged, 4= Senior)", [1, 2, 3, 4])
+Age_Category = st.sidebar.selectbox("Age Category (1=Youth, 2=Adult, 3=Middle-aged, 4=Senior)", [1, 2, 3, 4])
 Smoke_Alcohol = st.sidebar.slider("Combined Smoke-Alcohol Score (0–5)", 0.0, 5.0, 1.0)
 BMIxAge = BMI * Age
 Lifestyle_Score = st.sidebar.slider("Lifestyle Score (0–10)", 0.0, 10.0, 5.0)
@@ -101,7 +101,6 @@ if st.button("🔍 Predict Diabetes Risk"):
         prediction = model.predict(input_data)[0]
         probability = model.predict_proba(input_data)[0][1]
     except ValueError:
-        # Handle feature name mismatch gracefully
         prediction = model.predict(input_data.to_numpy())[0]
         probability = model.predict_proba(input_data.to_numpy())[0][1]
 
@@ -127,17 +126,40 @@ if st.button("🔍 Predict Diabetes Risk"):
     ))
     st.plotly_chart(fig, use_container_width=True)
 
-    # -------------------- SHAP EXPLANATION --------------------
+    # -------------------- SHAP EXPLANATION (FIXED) --------------------
     st.subheader("🔎 Why This Prediction?")
     st.write("Feature contribution visualization (using SHAP values):")
 
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(input_data)
     shap.initjs()
 
-    fig, ax = plt.subplots()
-    shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
-    st.pyplot(fig)
+    try:
+        # Try using the native XGBoost booster
+        booster = model.get_booster()
+        explainer = shap.TreeExplainer(booster)
+        shap_values = explainer.shap_values(input_data)
+
+        st.write("### Local Explanation (Current Input)")
+        shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
+        st.pyplot(bbox_inches="tight")
+
+        # Global importance plot
+        st.write("### Global Feature Importance (Sample-Based)")
+        fig, ax = plt.subplots(figsize=(8, 6))
+        shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
+        st.caption(str(e))
+        try:
+            explainer = shap.Explainer(model.predict, input_data)
+            shap_values = explainer(input_data)
+
+            st.write("### Local Explanation (Fallback)")
+            shap.waterfall_plot(shap_values[0])
+            st.pyplot(bbox_inches="tight")
+        except Exception as e2:
+            st.error(f"❌ SHAP visualization unavailable. Reason: {e2}")
 
     # -------------------- SUMMARY METRICS --------------------
     st.markdown("---")
@@ -149,3 +171,4 @@ if st.button("🔍 Predict Diabetes Risk"):
 
 st.markdown("---")
 st.caption("Final Model: Tuned XGBoost (SMOTE) | Developed by **Kaushlendra Pratap Singh**")
+
