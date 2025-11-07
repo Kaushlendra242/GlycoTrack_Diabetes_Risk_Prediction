@@ -1,175 +1,139 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-import joblib
+import numpy as np
 import shap
-import plotly.graph_objects as go
-import xgboost as xgb
+import joblib
 import matplotlib.pyplot as plt
+import xgboost as xgb
+from pathlib import Path
 
-# -------------------- PAGE CONFIG --------------------
-st.set_page_config(page_title="GlycoTrack: Diabetes Risk Prediction", page_icon="🩺", layout="centered")
+# --------------------------
 
-st.title("🩺 GlycoTrack: Diabetes Risk Prediction")
-st.markdown("""
-### Predict your likelihood of having diabetes based on key health indicators.
-This model uses a Tuned **XGBoost (SMOTE)** algorithm optimized for balanced recall and AUC.
-""")
+# 🎯 PAGE CONFIG
 
-# -------------------- LOAD MODEL --------------------
+# --------------------------
+
+st.set_page_config(
+page_title="GlycoTrack – Diabetes Risk Predictor",
+layout="wide",
+page_icon="🩸",
+)
+
+st.title("🩺 GlycoTrack – Predicting Diabetes Risk")
+st.write("Upload patient biomarker data to estimate diabetes risk using the trained XGBoost model.")
+
+# --------------------------
+
+# 📂 LOAD MODEL + FEATURES
+
+# --------------------------
+
 @st.cache_resource
-def load_model():
-    return joblib.load("final_glycotrack_model.pkl")
+def load_model_and_features():
+model = joblib.load("xgboost_final_model.pkl")  # your saved XGBoost model
+df_ref = pd.read_csv("diabetes_prepared.csv")
+features = df_ref.drop(columns=["Outcome"], errors="ignore").columns.tolist()
+return model, features
 
-model = load_model()
+try:
+model, feature_order = load_model_and_features()
+except Exception as e:
+st.error(f"❌ Failed to load model or dataset reference: {e}")
+st.stop()
 
-# -------------------- USER INPUTS --------------------
-st.sidebar.header("Enter Your Health Information")
+# --------------------------
 
-HighBP = st.sidebar.selectbox("High Blood Pressure", ["No", "Yes"])
-HighChol = st.sidebar.selectbox("High Cholesterol", ["No", "Yes"])
-CholCheck = st.sidebar.selectbox("Cholesterol Check (Past 5 Years)", ["No", "Yes"])
-BMI = st.sidebar.slider("Body Mass Index (BMI)", 10.0, 60.0, 25.0)
-Smoker = st.sidebar.selectbox("Smoked 100+ Cigarettes in Lifetime", ["No", "Yes"])
-Stroke = st.sidebar.selectbox("Ever Had a Stroke?", ["No", "Yes"])
-HeartDiseaseorAttack = st.sidebar.selectbox("Heart Disease or Attack History", ["No", "Yes"])
-PhysActivity = st.sidebar.selectbox("Physically Active in Last 30 Days", ["No", "Yes"])
-Fruits = st.sidebar.selectbox("Consume Fruits Daily?", ["No", "Yes"])
-Veggies = st.sidebar.selectbox("Consume Vegetables Daily?", ["No", "Yes"])
-HvyAlcoholConsump = st.sidebar.selectbox("Heavy Alcohol Consumption?", ["No", "Yes"])
-AnyHealthcare = st.sidebar.selectbox("Have Any Health Coverage?", ["No", "Yes"])
-NoDocbcCost = st.sidebar.selectbox("Couldn’t See Doctor Due to Cost?", ["No", "Yes"])
-GenHlth = st.sidebar.selectbox("General Health (1=Excellent, 5=Poor)", [1, 2, 3, 4, 5])
-MentHlth = st.sidebar.slider("Days of Poor Mental Health (Last 30 Days)", 0, 30, 5)
-PhysHlth = st.sidebar.slider("Days of Poor Physical Health (Last 30 Days)", 0, 30, 5)
-DiffWalk = st.sidebar.selectbox("Difficulty Walking or Climbing Stairs?", ["No", "Yes"])
-Sex = st.sidebar.selectbox("Sex", ["Female", "Male"])
-Age = st.sidebar.slider("Age", 18, 100, 35)
-Education = st.sidebar.selectbox("Education Level (1=No school ... 6=College 4+ years)", [1, 2, 3, 4, 5, 6])
-Income = st.sidebar.selectbox("Income Level (1=10000 or less ... 8=75000 or more)", [1, 2, 3, 4, 5, 6, 7, 8])
+# 📥 DATA INPUT
 
-# Additional derived features
-BMI_Category = st.sidebar.selectbox("BMI Category (1=Underweight, 2=Normal, 3=Overweight, 4=Obese)", [1, 2, 3, 4])
-Age_Category = st.sidebar.selectbox("Age Category (1=Youth, 2=Adult, 3=Middle-aged, 4=Senior)", [1, 2, 3, 4])
-Smoke_Alcohol = st.sidebar.slider("Combined Smoke-Alcohol Score (0–5)", 0.0, 5.0, 1.0)
-BMIxAge = BMI * Age
-Lifestyle_Score = st.sidebar.slider("Lifestyle Score (0–10)", 0.0, 10.0, 5.0)
+# --------------------------
 
-# -------------------- FEATURE ORDER --------------------
-feature_names = [
-    "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke",
-    "HeartDiseaseorAttack", "PhysActivity", "Fruits", "Veggies",
-    "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost", "GenHlth",
-    "MentHlth", "PhysHlth", "DiffWalk", "Sex", "Age", "Education",
-    "Income", "BMI_Category", "Age_Category", "Smoke_Alcohol",
-    "BMIxAge", "Lifestyle_Score"
-]
+st.subheader("📤 Upload or Enter Data")
 
-# -------------------- INPUT DATAFRAME --------------------
-input_data = pd.DataFrame([[
-    1 if HighBP == "Yes" else 0,
-    1 if HighChol == "Yes" else 0,
-    1 if CholCheck == "Yes" else 0,
-    BMI,
-    1 if Smoker == "Yes" else 0,
-    1 if Stroke == "Yes" else 0,
-    1 if HeartDiseaseorAttack == "Yes" else 0,
-    1 if PhysActivity == "Yes" else 0,
-    1 if Fruits == "Yes" else 0,
-    1 if Veggies == "Yes" else 0,
-    1 if HvyAlcoholConsump == "Yes" else 0,
-    1 if AnyHealthcare == "Yes" else 0,
-    1 if NoDocbcCost == "Yes" else 0,
-    GenHlth,
-    MentHlth,
-    PhysHlth,
-    1 if DiffWalk == "Yes" else 0,
-    1 if Sex == "Male" else 0,
-    Age,
-    Education,
-    Income,
-    BMI_Category,
-    Age_Category,
-    Smoke_Alcohol,
-    BMIxAge,
-    Lifestyle_Score
-]], columns=feature_names)
+uploaded_file = st.file_uploader("Upload a CSV file (must have the same columns as the training dataset)", type=["csv"])
 
-# -------------------- PREDICTION --------------------
-if st.button("🔍 Predict Diabetes Risk"):
-    try:
-        prediction = model.predict(input_data)[0]
-        probability = model.predict_proba(input_data)[0][1]
-    except ValueError:
-        prediction = model.predict(input_data.to_numpy())[0]
-        probability = model.predict_proba(input_data.to_numpy())[0][1]
+if uploaded_file:
+input_data = pd.read_csv(uploaded_file)
+st.success(f"✅ Uploaded {uploaded_file.name}")
+else:
+# Manual data entry as fallback
+st.info("Or enter patient data manually below:")
+input_data = pd.DataFrame(columns=feature_order)
+for col in feature_order:
+val = st.number_input(f"{col}", value=0.0)
+input_data.loc[0, col] = val
 
-    st.subheader("📊 Prediction Result")
-    if prediction == 1:
-        st.error(f"⚠️ High Diabetes Risk — ({probability*100:.1f}% probability)")
-    else:
-        st.success(f"✅ Low Diabetes Risk — ({(1 - probability)*100:.1f}% probability)")
+# Ensure feature order consistency
 
-    # -------------------- PROBABILITY GAUGE --------------------
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=probability * 100,
-        title={'text': "Predicted Diabetes Risk (%)"},
-        gauge={
-            'axis': {'range': [0, 100]},
-            'bar': {'color': "crimson" if prediction == 1 else "green"},
-            'steps': [
-                {'range': [0, 50], 'color': "lightgreen"},
-                {'range': [50, 80], 'color': "orange"},
-                {'range': [80, 100], 'color': "red"}
-            ]}
-    ))
-    st.plotly_chart(fig, use_container_width=True)
+try:
+input_data = input_data[feature_order]
+except KeyError as e:
+st.error(f"❌ Uploaded file missing columns: {e}")
+st.stop()
 
-    # -------------------- SHAP EXPLANATION (FIXED) --------------------
-    st.subheader("🔎 Why This Prediction?")
-    st.write("Feature contribution visualization (using SHAP values):")
+# --------------------------
+
+# 🧠 PREDICTION
+
+# --------------------------
+
+if st.button("🔮 Predict Diabetes Risk"):
+try:
+pred_prob = model.predict_proba(input_data)[:, 1]
+pred_class = model.predict(input_data)
+st.success(f"**Predicted Probability of Diabetes:** {pred_prob[0]:.3f}")
+st.info(f"**Predicted Class:** {'Positive' if pred_class[0] == 1 else 'Negative'}")
+
+```
+    # --------------------------
+    # 🧩 SHAP EXPLANATIONS
+    # --------------------------
+    st.divider()
+    st.subheader("🔎 Feature Contribution Visualization (SHAP Values)")
 
     try:
+        # Try using native XGBoost booster
         booster = model.get_booster()
         explainer = shap.TreeExplainer(booster)
         shap_values = explainer.shap_values(input_data)
 
-        tab1, tab2 = st.tabs(["🌿 Local Explanation", "📊 Global Feature Importance"])
+        st.write("### Local Explanation (Current Input)")
+        fig, ax = plt.subplots()
+        shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
+        st.pyplot(fig, bbox_inches="tight")
 
-        with tab1:
-            st.write("### Local Explanation (Current Input)")
-            fig, ax = plt.subplots()
-            shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
-            st.pyplot(fig, bbox_inches="tight")
-
-        with tab2:
-            st.write("### Global Feature Importance")
-            fig2, ax2 = plt.subplots(figsize=(8, 6))
-            shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
-            st.pyplot(fig2)
+        st.write("### Global Feature Importance (Sample-Based)")
+        fig2, ax2 = plt.subplots(figsize=(8, 6))
+        shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
+        st.pyplot(fig2)
 
     except Exception as e:
         st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
         st.caption(str(e))
+
         try:
-            explainer = shap.Explainer(model.predict, input_data)
-            shap_values = explainer(input_data)
+            # Use numeric probabilities and NumPy for fallback
+            predict_fn = lambda x: model.predict_proba(x)[:, 1]
+            explainer = shap.Explainer(predict_fn, input_data.to_numpy())
+            shap_values = explainer(input_data.to_numpy())
 
             st.write("### Local Explanation (Fallback)")
             fig3, ax3 = plt.subplots()
             shap.waterfall_plot(shap_values[0])
             st.pyplot(fig3, bbox_inches="tight")
+
         except Exception as e2:
             st.error(f"❌ SHAP visualization unavailable. Reason: {e2}")
-    # -------------------- SUMMARY METRICS --------------------
-    st.markdown("---")
-    st.subheader("📈 Model Performance Summary")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Accuracy", "0.84")
-    col2.metric("Recall", "0.85")
-    col3.metric("ROC-AUC", "0.91")
 
-st.markdown("---")
-st.caption("Final Model: Tuned XGBoost (SMOTE) | Developed by **Kaushlendra Pratap Singh**")
+except Exception as e:
+    st.error(f"❌ Prediction failed: {e}")
+```
+
+# --------------------------
+
+# 🧾 FOOTER
+
+# --------------------------
+
+st.divider()
+st.caption("Developed with ❤️ by GlycoTrack AI – XGBoost model deployed for web.")
 
