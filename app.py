@@ -130,23 +130,24 @@ if st.button("🔍 Predict Diabetes Risk"):
     st.subheader("🔎 Why This Prediction?")
     st.write("Feature contribution visualization (using SHAP values):")
 
-    shap.initjs()
-
     try:
-        # Try using the native XGBoost booster
         booster = model.get_booster()
         explainer = shap.TreeExplainer(booster)
         shap_values = explainer.shap_values(input_data)
 
-        st.write("### Local Explanation (Current Input)")
-        shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
-        st.pyplot(bbox_inches="tight")
+        tab1, tab2 = st.tabs(["🌿 Local Explanation", "📊 Global Feature Importance"])
 
-        # Global importance plot
-        st.write("### Global Feature Importance (Sample-Based)")
-        fig, ax = plt.subplots(figsize=(8, 6))
-        shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
-        st.pyplot(fig)
+        with tab1:
+            st.write("### Local Explanation (Current Input)")
+            fig, ax = plt.subplots()
+            shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
+            st.pyplot(fig, bbox_inches="tight")
+
+        with tab2:
+            st.write("### Global Feature Importance")
+            fig2, ax2 = plt.subplots(figsize=(8, 6))
+            shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
+            st.pyplot(fig2)
 
     except Exception as e:
         st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
@@ -156,11 +157,11 @@ if st.button("🔍 Predict Diabetes Risk"):
             shap_values = explainer(input_data)
 
             st.write("### Local Explanation (Fallback)")
+            fig3, ax3 = plt.subplots()
             shap.waterfall_plot(shap_values[0])
-            st.pyplot(bbox_inches="tight")
+            st.pyplot(fig3, bbox_inches="tight")
         except Exception as e2:
             st.error(f"❌ SHAP visualization unavailable. Reason: {e2}")
-
     # -------------------- SUMMARY METRICS --------------------
     st.markdown("---")
     st.subheader("📈 Model Performance Summary")
