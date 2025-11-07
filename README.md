@@ -157,4 +157,4 @@ Accurate prediction helps:
 **Kaushlendra Pratap Singh**  
 Data Analyst | Data Science Enthusiast | Optum SME  
 📍 New Delhi, India  
-[LinkedIn](https://www.linkedin.com/in/kaushlendra-pratap-singh/) | [GitHub](https://github.com/kaushlendra-pratap-singh)
+[LinkedIn](https://www.linkedin.com/in/kaushlendra-singh-51397655/) | [GitHub](https://github.com/Kaushlendra242)
