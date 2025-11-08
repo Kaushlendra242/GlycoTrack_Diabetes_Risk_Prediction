@@ -30,7 +30,7 @@ st.write("Upload patient biomarker data to estimate diabetes risk using the trai
 
 @st.cache_resource
 def load_model_and_features():
-    model = joblib.load("xgboost_final_model.pkl")  # your saved XGBoost model
+    model = joblib.load("final_glycotrack_model.pkl")  # your saved XGBoost model
     df_ref = pd.read_csv("diabetes_prepared.csv")
     features = df_ref.drop(columns=["Outcome"], errors="ignore").columns.tolist()
     return model, features
