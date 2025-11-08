@@ -132,56 +132,37 @@ if st.button("🔍 Predict Diabetes Risk"):
     ))
     st.plotly_chart(fig, use_container_width=True)
 
-    # -------------------- 🧩 SHAP EXPLANATIONS --------------------
-    st.divider()
-    st.subheader("🔎 Why This Prediction?")
-    st.write("Feature contribution visualization (using SHAP values):")
+# -------------------- 🧩 SHAP EXPLANATIONS --------------------
+st.divider()
+st.subheader("🔎 Why This Prediction?")
+st.write("Feature contribution visualization (using SHAP values):")
 
-    
+# Ensure input_data is numeric
+input_data = input_data.replace(r'^\[|\]$', '', regex=True)
+input_data = input_data.apply(pd.to_numeric, errors='coerce')
 
-    try:
-        booster = model.get_booster()
-        explainer = shap.TreeExplainer(booster)
-        shap_values = explainer.shap_values(input_data)
+try:
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(input_data)
 
+    tab1, tab2 = st.tabs(["🌿 Local Explanation", "📊 Global Feature Importance"])
+
+    with tab1:
         st.write("### Local Explanation (Current Input)")
         fig, ax = plt.subplots()
         shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
         st.pyplot(fig, bbox_inches="tight")
 
-        st.write("### Global Feature Importance (Sample-Based)")
+    with tab2:
+        st.write("### Global Feature Importance")
         fig2, ax2 = plt.subplots(figsize=(8, 6))
         shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
         st.pyplot(fig2)
 
-        tab1, tab2 = st.tabs(["🌿 Local Explanation", "📊 Global Feature Importance"])
+except Exception as e:
+    st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
+    st.caption(str(e))
 
-        with tab1:
-            st.write("### Local Explanation (Current Input)")
-            fig, ax = plt.subplots()
-            shap.force_plot(explainer.expected_value, shap_values, input_data, matplotlib=True, show=False)
-            st.pyplot(fig, bbox_inches="tight")
-
-        with tab2:
-            st.write("### Global Feature Importance")
-            fig2, ax2 = plt.subplots(figsize=(8, 6))
-            shap.summary_plot(shap_values, input_data, plot_type="bar", show=False)
-            st.pyplot(fig2)
-
-    except Exception as e:
-        st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
-        st.caption(str(e))
-        try:
-            predict_fn = lambda x: model.predict_proba(x)[:, 1]
-            explainer = shap.Explainer(predict_fn, input_data.to_numpy())
-            shap_values = explainer(input_data.to_numpy())
-
-            st.write("### Local Explanation (Fallback)")
-            fig3, ax3 = plt.subplots()
-            shap.waterfall_plot(shap_values[0])
-            st.pyplot(fig3, bbox_inches="tight")
-        except Exception as e2:
-            st.error(f"❌ SHAP visualization unavailable. Reason: {e2}")
     # -------------------- SUMMARY METRICS --------------------
     st.markdown("---")
     st.subheader("📈 Model Performance Summary")
