@@ -142,7 +142,8 @@ input_data = input_data.replace(r'^\[|\]$', '', regex=True)
 input_data = input_data.apply(pd.to_numeric, errors='coerce')
 
 try:
-    explainer = shap.TreeExplainer(model)
+    booster = model.get_booster()
+    explainer = shap.TreeExplainer(booster)
     shap_values = explainer.shap_values(input_data)
 
     tab1, tab2 = st.tabs(["🌿 Local Explanation", "📊 Global Feature Importance"])
@@ -163,6 +164,22 @@ except Exception as e:
     st.warning("⚠️ TreeExplainer failed — using fallback SHAP method.")
     st.caption(str(e))
 
+    try:
+        # Use model.predict_proba for proper numeric outputs
+        predict_fn = lambda x: model.predict_proba(x)[:, 1]
+        explainer = shap.Explainer(predict_fn, input_data.to_numpy())
+        shap_values = explainer(input_data.to_numpy())
+
+        st.write("### Local Explanation (Fallback)")
+        fig3, ax3 = plt.subplots()
+        shap.waterfall_plot(shap_values[0])
+        st.pyplot(fig3, bbox_inches="tight")
+
+    except Exception as e2:
+        st.error(f"❌ SHAP visualization unavailable. Reason: {e2}")
+    
+    
+
     # -------------------- SUMMARY METRICS --------------------
     st.markdown("---")
     st.subheader("📈 Model Performance Summary")
@@ -173,4 +190,3 @@ except Exception as e:
 
 st.markdown("---")
 st.caption("Final Model: Tuned XGBoost (SMOTE) | Developed by **Kaushlendra Pratap Singh**")
-
