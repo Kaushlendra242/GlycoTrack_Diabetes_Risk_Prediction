@@ -26,6 +26,13 @@ def load_model():
 
 model = load_model()
 
+# -------------------- 🧩 LOAD SHAP EXPLAINER (SAFE) --------------------
+@st.cache_resource
+def load_explainer():
+    return shap.TreeExplainer(model)
+
+explainer = load_explainer()
+
 # -------------------- 📥 USER INPUTS --------------------
 st.sidebar.header("Enter Your Health Information")
 
@@ -122,20 +129,17 @@ if st.button("🔍 Predict Diabetes Risk"):
     st.divider()
     st.subheader("🔎 Why This Prediction?")
 
-    @st.cache_resource
-    def load_explainer(m):
-        return shap.TreeExplainer(m)
-
-    explainer = load_explainer(model)
     shap_values = explainer(input_data.to_numpy())
 
-    # ---- LOCAL EXPLANATION ----
     st.markdown("### 🧠 Local Explanation (Current Input)")
     fig1, ax1 = plt.subplots(figsize=(10, 6))
-    shap.plots.waterfall(shap_values[0], feature_names=feature_names, show=False)
+    shap.plots.waterfall(
+        shap_values[0],
+        feature_names=feature_names,
+        show=False
+    )
     st.pyplot(fig1, clear_figure=True)
 
-    # ---- GLOBAL IMPORTANCE ----
     st.markdown("### 🌍 Global Feature Importance")
     fig2, ax2 = plt.subplots(figsize=(10, 6))
     shap.summary_plot(
