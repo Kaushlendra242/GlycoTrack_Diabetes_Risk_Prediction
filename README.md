@@ -4,8 +4,7 @@ Predict your likelihood of having diabetes using a Tuned **XGBoost (SMOTE)** mod
 
 ---
 ### 🚀 Live Demo
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://kaushlendra-glycotrack.streamlit.app)
-(https://drugs-ml-project-kaushlendra-ds.streamlit.app/)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)] (https://glycotrackdiabetesriskprediction-kaushalvibha.streamlit.app/)
 ---
 
 # 🎯 Project Overview
